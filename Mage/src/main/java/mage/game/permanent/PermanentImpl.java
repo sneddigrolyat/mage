@@ -6,7 +6,6 @@ import mage.MageObjectReference;
 import mage.ObjectColor;
 import mage.abilities.Abilities;
 import mage.abilities.Ability;
-import mage.abilities.AbilityImpl;
 import mage.abilities.SpellAbility;
 import mage.abilities.common.RoomAbility;
 import mage.abilities.effects.ContinuousEffect;
@@ -454,13 +453,7 @@ public abstract class PermanentImpl extends CardImpl implements Permanent {
         // other abilities -- any amount of instances
         if (!abilities.containsKey(ability.getId())) {
             Ability copyAbility = ability.copy();
-            if (fromExistingObject && copyAbility instanceof AbilityImpl) {
-                // Preserve linkage for abilities copied from an existing object so linked abilities
-                // (e.g. Squad/Offspring) keep matching cost tags across copy boundaries.
-                ((AbilityImpl) copyAbility).newIdKeepingLinkage();
-            } else {
-                copyAbility.newId(); // needed so that source can get an ability multiple times (e.g. Raging Ravine)
-            }
+            copyAbility.newId(); // needed so that source can get an ability multiple times (e.g. Raging Ravine)
             copyAbility.setControllerId(controllerId);
             copyAbility.setSourceId(objectId);
             // triggered abilities must be added to the state().triggers

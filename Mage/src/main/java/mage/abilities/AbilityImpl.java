@@ -51,6 +51,7 @@ import mage.util.ThreadLocalStringBuilder;
 import mage.watchers.Watcher;
 import org.apache.log4j.Logger;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -169,6 +170,14 @@ public abstract class AbilityImpl implements Ability {
         newOriginalIdInternal(this.linkageId);
     }
 
+    @Override
+    public void remapForSource(UUID sourceSeed) {
+        remapForSourceInternal(
+                sourceSeed,
+                deterministicId(sourceSeed, "linkage", this.linkageId)
+        );
+    }
+
     protected void newIdInternal(UUID newLinkageId) {
         if (!(this instanceof MageSingleton)) {
             this.id = UUID.randomUUID();
@@ -196,6 +205,27 @@ public abstract class AbilityImpl implements Ability {
                 sub.newId();
             }
         }
+    }
+
+    protected void remapForSourceInternal(UUID sourceSeed, UUID newLinkageId) {
+        UUID newOriginalId = deterministicId(sourceSeed, "ability", this.originalId);
+        this.id = newOriginalId;
+        this.originalId = newOriginalId;
+        setLinkageIdInternal(newLinkageId);
+        getEffects().newId();
+        for (Ability sub : getSubAbilities()) {
+            if (sub instanceof AbilityImpl) {
+                ((AbilityImpl) sub).remapForSourceInternal(sourceSeed, newLinkageId);
+            } else {
+                sub.remapForSource(sourceSeed);
+            }
+        }
+    }
+
+    private static UUID deterministicId(UUID sourceSeed, String kind, UUID baseId) {
+        return UUID.nameUUIDFromBytes(
+                (kind + '|' + sourceSeed + '|' + baseId).getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     @Override

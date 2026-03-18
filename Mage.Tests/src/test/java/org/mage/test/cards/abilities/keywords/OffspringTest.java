@@ -177,6 +177,51 @@ public class OffspringTest extends CardTestPlayerBase {
     }
 
     @Test
+    public void testTwoGrantedOffspringAbilitiesOnePayment() {
+        FilterNonlandCard creatureSpells = new FilterNonlandCard("creature spells");
+        creatureSpells.add(CardType.CREATURE.getPredicate());
+
+        addCustomCardWithAbility(
+                "offspring grant source A",
+                playerA,
+                new SimpleStaticAbility(
+                        Zone.BATTLEFIELD,
+                        new GainAbilityControlledSpellsEffect(new OffspringAbility("{2}"), creatureSpells)
+                ),
+                null,
+                CardType.ENCHANTMENT,
+                "",
+                Zone.BATTLEFIELD
+        );
+        addCustomCardWithAbility(
+                "offspring grant source B",
+                playerA,
+                new SimpleStaticAbility(
+                        Zone.BATTLEFIELD,
+                        new GainAbilityControlledSpellsEffect(new OffspringAbility("{2}"), creatureSpells)
+                ),
+                null,
+                CardType.ENCHANTMENT,
+                "",
+                Zone.BATTLEFIELD
+        );
+
+        addCard(Zone.BATTLEFIELD, playerA, "Plains", 6);
+        addCard(Zone.HAND, playerA, lion);
+
+        setChoice(playerA, true);
+        setChoice(playerA, false);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, lion);
+
+        setStrictChooseMode(true);
+        setStopAt(1, PhaseStep.END_TURN);
+        execute();
+
+        assertPermanentCount(playerA, lion, 2);
+        assertTokenCount(playerA, lion, 1);
+    }
+
+    @Test
     public void testGrantedOffspringSourceRemovedBeforeEtbNoCopy() {
         addCard(Zone.BATTLEFIELD, playerA, "Zinnia, Valley's Voice");
         addCard(Zone.BATTLEFIELD, playerA, "Plains", 5);
@@ -235,6 +280,83 @@ public class OffspringTest extends CardTestPlayerBase {
 
         assertPermanentCount(playerA, bandit, 3);
         assertTokenCount(playerA, bandit, 2);
+    }
+
+    @Test
+    public void testCopyingSpellMustKeepOffspringStatus() {
+        addCard(Zone.HAND, playerA, bandit, 1);
+        addCard(Zone.BATTLEFIELD, playerA, "Mountain", 4);
+        addCard(Zone.BATTLEFIELD, playerA, "Forest", 1);
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 1);
+        addCard(Zone.HAND, playerA, "Double Major", 1);
+
+        activateManaAbility(1, PhaseStep.PRECOMBAT_MAIN, playerA, "{T}: Add {R}", 4);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, bandit);
+        setChoice(playerA, true); // pay offspring once
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Double Major", bandit, bandit, StackClause.WHILE_ON_STACK);
+        checkStackSize("before copy", 1, PhaseStep.PRECOMBAT_MAIN, playerA, 2); // bandit + double major
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN, true);
+        checkStackSize("after copy", 1, PhaseStep.PRECOMBAT_MAIN, playerA, 2); // spell + copy
+
+        setStrictChooseMode(false);
+        setStopAt(1, PhaseStep.END_TURN);
+        execute();
+
+        assertPermanentCount(playerA, bandit, 4);
+        assertTokenCount(playerA, bandit, 3);
+    }
+
+    @Test
+    public void testCopyingEtbTriggerMustKeepOffspringStatus() {
+        addCard(Zone.HAND, playerA, bandit, 1);
+        addCard(Zone.BATTLEFIELD, playerA, "Mountain", 6);
+        addCard(Zone.BATTLEFIELD, playerA, "Strionic Resonator", 1);
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, bandit);
+        setChoice(playerA, true); // pay offspring once
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN, true);
+
+        // bandit resolved, its offspring trigger is on the stack; copy that trigger
+        activateAbility(1, PhaseStep.PRECOMBAT_MAIN, playerA,
+                "{2}, {T}: Copy target triggered ability you control. You may choose new targets for the copy.");
+
+        setStrictChooseMode(false);
+        setStopAt(1, PhaseStep.PRECOMBAT_MAIN);
+        execute();
+
+        assertPermanentCount(playerA, bandit, 3);
+        assertTokenCount(playerA, bandit, 2);
+    }
+
+    @Test
+    public void testPrintedAndGrantedOffspringRollbackClearsOldPayments() {
+        addCard(Zone.BATTLEFIELD, playerA, "Zinnia, Valley's Voice");
+        addCard(Zone.BATTLEFIELD, playerA, "Mountain", 6);
+        addCard(Zone.HAND, playerA, bandit);
+
+        // first line: pay both offspring costs, then roll back to the start of the turn
+        setChoice(playerA, true);
+        setChoice(playerA, true);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, bandit);
+        setChoice(playerA, bandit);
+
+        rollbackTurns(1, PhaseStep.BEGIN_COMBAT, playerA, 0);
+        rollbackAfterActionsStart();
+
+        // after rollback, only the printed offspring payment should be remembered
+        setChoice(playerA, true);
+        setChoice(playerA, false);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, bandit);
+
+        rollbackAfterActionsEnd();
+
+        setStrictChooseMode(true);
+        setStopAt(1, PhaseStep.END_TURN);
+        execute();
+
+        assertPermanentCount(playerA, bandit, 2);
+        assertTokenCount(playerA, bandit, 1);
     }
 
 }

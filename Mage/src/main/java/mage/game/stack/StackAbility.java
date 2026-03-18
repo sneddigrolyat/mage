@@ -503,6 +503,11 @@ public class StackAbility extends StackObjectImpl implements Ability {
     }
 
     @Override
+    public void remapForSource(UUID sourceSeed) {
+        ability.remapForSource(sourceSeed);
+    }
+
+    @Override
     public Ability getStackAbility() {
         return ability;
     }

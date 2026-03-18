@@ -24,9 +24,15 @@ public class PermanentToken extends PermanentImpl {
     // this PermanentToken resets to it on each game cycle
     // TODO: see PermanentCard.card for usage research and fixes
     protected Token token;
+    private final boolean preserveCopiedSpellLinkage;
 
     public PermanentToken(Token token, UUID controllerId, Game game) {
+        this(token, controllerId, game, false);
+    }
+
+    public PermanentToken(Token token, UUID controllerId, Game game, boolean preserveCopiedSpellLinkage) {
         super(controllerId, controllerId, token.getName()); // random id
+        this.preserveCopiedSpellLinkage = preserveCopiedSpellLinkage;
         this.token = token.copy();
         this.token.getAbilities().newOriginalId(); // neccessary if token has ability like DevourAbility()
         this.token.getAbilities().setSourceId(objectId);
@@ -49,6 +55,7 @@ public class PermanentToken extends PermanentImpl {
     protected PermanentToken(final PermanentToken permanent) {
         super(permanent);
         this.token = permanent.token.copy();
+        this.preserveCopiedSpellLinkage = permanent.preserveCopiedSpellLinkage;
     }
 
     @Override
@@ -91,8 +98,14 @@ public class PermanentToken extends PermanentImpl {
             // first time -> create ContinuousEffects only once
             // so sourceId must be null (keep triggered abilities forever?)
             for (Ability ability : token.getAbilities()) {
-                //Don't add subabilities since the original token already has them in its abilities list
-                this.addAbility(ability, null, game, true);
+                if (preserveCopiedSpellLinkage) {
+                    // A resolving copied permanent spell becomes a token permanent, but it is still the
+                    // same spell-to-permanent transition for linked costs like Offspring and Squad.
+                    addAbilityKeepingLinkage(ability, game);
+                } else {
+                    // Don't add subabilities since the original token already has them in its abilities list.
+                    this.addAbility(ability, null, game, true);
+                }
             }
         }
         this.abilities.setControllerId(this.controllerId);
@@ -120,6 +133,18 @@ public class PermanentToken extends PermanentImpl {
         if (token.getCopySourceCard() instanceof RoomCard) {
             RoomCard.setRoomCharacteristics(this, game);
         }
+    }
+
+    private void addAbilityKeepingLinkage(Ability ability, Game game) {
+        if (abilities.containsKey(ability.getId())) {
+            return;
+        }
+        ability.setControllerId(controllerId);
+        ability.setSourceId(objectId);
+        if (game != null) {
+            game.getState().addAbility(ability, null, this);
+        }
+        abilities.add(ability);
     }
 
     @Override

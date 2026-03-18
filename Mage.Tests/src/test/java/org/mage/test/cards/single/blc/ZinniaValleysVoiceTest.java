@@ -52,6 +52,61 @@ public class ZinniaValleysVoiceTest extends CardTestPlayerBase {
     }
 
     @Test
+    public void testSparkDoubleCopyOfZinniaOneGrantedPayment() {
+        addCard(Zone.BATTLEFIELD, playerA, zinnia);
+        addCard(Zone.BATTLEFIELD, playerA, "Plains", 8);
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 4);
+        addCard(Zone.HAND, playerA, "Spark Double");
+        addCard(Zone.HAND, playerA, lion);
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Spark Double");
+        setChoice(playerA, true);
+        setChoice(playerA, true);
+        setChoice(playerA, zinnia);
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN, true);
+
+        setChoice(playerA, true);
+        setChoice(playerA, false);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, lion);
+
+        setStrictChooseMode(true);
+        setStopAt(1, PhaseStep.END_TURN);
+        execute();
+
+        assertPermanentCount(playerA, zinnia, 2);
+        assertPermanentCount(playerA, lion, 2);
+        assertTokenCount(playerA, lion, 1);
+    }
+
+    @Test
+    public void testSparkDoubleCopyOfZinniaTwoGrantedPayments() {
+        addCard(Zone.BATTLEFIELD, playerA, zinnia);
+        addCard(Zone.BATTLEFIELD, playerA, "Plains", 8);
+        addCard(Zone.BATTLEFIELD, playerA, "Island", 4);
+        addCard(Zone.HAND, playerA, "Spark Double");
+        addCard(Zone.HAND, playerA, lion);
+
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, "Spark Double");
+        setChoice(playerA, true);
+        setChoice(playerA, true);
+        setChoice(playerA, zinnia);
+        waitStackResolved(1, PhaseStep.PRECOMBAT_MAIN, true);
+
+        setChoice(playerA, true);
+        setChoice(playerA, true);
+        castSpell(1, PhaseStep.PRECOMBAT_MAIN, playerA, lion);
+        setChoice(playerA, lion); // stack both granted offspring triggers (2 triggers -> 1 choice)
+
+        setStrictChooseMode(true);
+        setStopAt(1, PhaseStep.END_TURN);
+        execute();
+
+        assertPermanentCount(playerA, zinnia, 2);
+        assertPermanentCount(playerA, lion, 3);
+        assertTokenCount(playerA, lion, 2);
+    }
+
+    @Test
     public void testRemoveZinniaWhileOffspringTriggersOnStackBothStillResolve() {
         addCard(Zone.BATTLEFIELD, playerA, zinnia);
         addCard(Zone.BATTLEFIELD, playerA, "Plains", 6);

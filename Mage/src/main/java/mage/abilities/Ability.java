@@ -44,6 +44,13 @@ public interface Ability extends Controllable, Serializable {
     void newOriginalId(); // TODO: delete newOriginalId???
 
     /**
+     * Remap this ability to a deterministic identity for a specific granting/copy seed.
+     * Implementations should keep the identity stable for the same seed while making it
+     * distinct from other sources.
+     */
+    void remapForSource(UUID sourceSeed);
+
+    /**
      * Gets the {@link AbilityType} of this ability.
      *
      * @return The {@link AbilityType type} of this ability.
